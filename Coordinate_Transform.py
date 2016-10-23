@@ -111,7 +111,7 @@ def rotation_ecef2ned(LLA):
 
 
 def relA2B_RAE(A, B):
-    """
+    """Determine the relative azimuth and elevation from object A to object B.
 
     Parameters
     ----------
