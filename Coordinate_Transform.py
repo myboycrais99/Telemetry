@@ -9,6 +9,7 @@ import numpy as np
 d2r = np.pi / 180
 r2d = 180 / np.pi
 
+
 def lla2ecef(LLA, ellipse='WGS84'):
     """Convert latitude, longitude, and altitude to earth-centered, earth-fixed
     (ECEF) cartesian
@@ -44,17 +45,18 @@ def lla2ecef(LLA, ellipse='WGS84'):
     e = np.sqrt(1 - (b / a) ** 2)
 
     # Intermediate calculation (prime vertical radius of curvature)
-    n = a / np.sqrt(1 - (e * np.sin(lat) ** 2))
+    N = a / np.sqrt(1 - (e * np.sin(lat)) ** 2)
 
-    x = (n + alt) * np.cos(lat) * np.cos(lon)
-    y = (n + alt) * np.cos(lat) * np.sin(lon)
-    z = ((1 - e) ** 2 * n + alt) * np.sin(lat)
+    X = (N + alt) * np.cos(lat) * np.cos(lon)
+    Y = (N + alt) * np.cos(lat) * np.sin(lon)
+    Z = ((b / a) ** 2 * N + alt) * np.sin(lat)
 
-    return np.array([x, y, z], dtype=float)
+    return np.array([X, Y, Z], dtype=float)
 
-def lla2ten(LLA):
+
+def rotation_ned2ecef(LLA):
     """Rotation matrix for converting from North-East-Down (NED) reference
-    frame to Earth-Centered Earth-Fixed frame from Latitude and Longitude.
+    frame to Earth-Centered Earth-Fixed frame using Latitude and Longitude.
 
     Parameters
     ----------
@@ -64,7 +66,7 @@ def lla2ten(LLA):
 
     Returns
     -------
-    ten : array
+    out : array
         A 3x3 matrix representing the NED to ECEF rotation from LLA
 
     Raises
@@ -73,13 +75,40 @@ def lla2ten(LLA):
     """
     lat, lon = LLA[0] * d2r, LLA[1] * d2r
 
-    ten = np.array([
+    return np.array([
         [-np.sin(lat) * np.cos(lon), -np.sin(lon), -np.cos(lat) * np.cos(lon)],
         [-np.sin(lat) * np.sin(lon), np.cos(lon), -np.cos(lat) * np.sin(lon)],
         [np.cos(lat), 0.0, -np.sin(lat)]
     ])
 
-    return ten
+
+def rotation_ecef2ned(LLA):
+    """Rotation matrix for converting from Earth-Centered Earth-Fixed frame to
+    North-East-Down (NED) reference using Latitude and Longitude.
+
+    Parameters
+    ----------
+    LLA : float array
+        Geodetic latitude in radians, longitude in radians, and altitude above
+        reference ellipsoid in meters
+
+    Returns
+    -------
+    out : array
+        A 3x3 matrix representing the ECEF to NED rotation from LLA
+
+    Raises
+    ------
+    None
+    """
+    lat, lon = LLA[0] * d2r, LLA[1] * d2r
+
+    return np.array([
+        [-np.sin(lat) * np.cos(lon), -np.sin(lat) * np.sin(lon), np.cos(lat)],
+        [-np.sin(lon), np.cos(lon), 0.0],
+        [-np.cos(lat) * np.cos(lon), -np.cos(lat) * np.sin(lon), -np.sin(lat)]
+    ])
+
 
 def relA2B_RAE(A, B):
     """
@@ -100,20 +129,13 @@ def relA2B_RAE(A, B):
     None
     """
 
-    ecef1 = lla2ecef(A)
-    ecef2 = lla2ecef(B)
+    relA2B_ned = np.dot(rotation_ecef2ned(A), lla2ecef(B) - lla2ecef(A))
 
-    diff_ecef = ecef2 - ecef1
-    ten = lla2ten(A)
+    r = np.linalg.norm(relA2B_ned)
+    az = np.arctan2(relA2B_ned[1], relA2B_ned[0]) * r2d
+    el = np.arcsin(-relA2B_ned[2] / r) * r2d
 
-    relA2B_ned = np.dot(ten, diff_ecef)
-
-    return np.array([
-        np.linalg.norm(relA2B_ned),
-        np.arctan2(relA2B_ned[1], relA2B_ned[0]) * r2d,
-        np.arctan2(-relA2B_ned[2],
-                   np.sqrt(relA2B_ned[0] ** 2 + relA2B_ned[1] ** 2)) * r2d
-    ])
+    return np.array([r, az, el])
 
 if __name__ == '__main__':
     pass
