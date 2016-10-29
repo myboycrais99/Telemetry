@@ -301,7 +301,6 @@ def relA2B_RAE(A, B):
     ------
     None
     """
-
     relA2B_ned = np.dot(ecef2ned(A), geodetic2ecef(B) - geodetic2ecef(A))
 
     r = np.linalg.norm(relA2B_ned)
@@ -309,6 +308,76 @@ def relA2B_RAE(A, B):
     el = np.arcsin(-relA2B_ned[2] / r) * r2d
 
     return np.array([r, az, el])
+
+
+def platform_dcm(orientation):
+    """Calculate direction cosine matrix relative to a body's orientation.
+
+    Parameters
+    ----------
+    orientation : float array
+        Heading, Pitch, and Roll of platform in degrees
+
+    Return
+    ------
+    out : float array
+        A 3x3 dimensioned array cooresponding to the direction cosine matrix
+
+    Raises
+    ------
+    None
+    """
+    hdg, pitch, roll = np.asarray(orientation) * d2r
+
+    return([
+        [cos(pitch) * cos(hdg), cos(pitch) * sin(hdg), -sin(pitch)],
+        [-cos(roll) * sin(hdg) + sin(roll) * sin(pitch) * cos(hdg),
+            cos(roll) * cos(hdg) + sin(roll) * sin(pitch) * sin(hdg),
+            sin(roll) * cos(pitch)],
+        [sin(roll) * sin(hdg) + cos(roll) * sin(pitch) * cos(hdg),
+            -sin(roll) * cos(hdg) + cos(roll) * sin(pitch) * sin(hdg),
+            cos(roll) * cos(pitch)]
+    ])
+
+
+def LLA_platform_offset(platform, orientation, dB):
+    """Determine the LLA offset between two objects
+
+    Parameters
+    ----------
+    platform : float array
+        LLA coordinates of a platform object
+    orientation : float array
+        Heading, Pitch, Roll of platform object in degrees
+    B : float array
+        x, y, z offset distances from platform to object B in meters
+
+    Return
+    ------
+    out : float array
+        LLA coordinates of B
+
+    Raises
+    ------
+    None
+    """
+    lat, lon = platform[0] * d2r, platform[1] * d2r
+    dcm = platform_dcm(orientation)
+    dB = np.asarray(dB).reshape(3, 1)
+
+    # For some reason, there is a switch from ENU to NEU coordinates
+    d_neu = np.dot(dcm.T, dB)
+    vNorth, uEast, wUp = d_neu
+
+    x0, y0, z0 = geodetic2ecef(platform)
+    t = float(cos(lat) * wUp - sin(lat) * vNorth)
+
+    dx = float(cos(lon) * t - sin(lon) * uEast)
+    dy = float(sin(lon) * t + cos(lon) * uEast)
+    dz = float(sin(lat) * wUp + cos(lat) * vNorth)
+
+    return ecef2geodetic([x0 + dx, y0 + dy, z0 + dz])
+
 
 if __name__ == '__main__':
     pass
