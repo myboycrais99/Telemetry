@@ -5,10 +5,26 @@ space for telemetry systems.
 
 from __future__ import division, print_function
 import numpy as np
+from numpy import cos, sin
 
 d2r = np.pi / 180
 r2d = 180 / np.pi
 
+ellipses = {
+    'WGS84': {'a': 6378137, 'inv_f': 298.257223563, 'unit': 'm'}
+    }
+
+def degrees2dms(deg):
+    """"Convert from decimal degrees to degrees, minutes, seconds"""
+    d = int(deg)
+    m = int((deg - d) * 60)
+    s = ((deg - d) * 60 - m) * 60
+
+    return d, m, s
+
+def dms2degrees(dms):
+    """Convert from degrees, minutes, seconds to decimal degrees"""
+    return dms[0] + (dms[1] + dms[2] / 60) / 60
 
 def lla2ecef(LLA, ellipse='WGS84'):
     """Convert latitude, longitude, and altitude to earth-centered, earth-fixed
@@ -33,10 +49,6 @@ def lla2ecef(LLA, ellipse='WGS84'):
     None
     """
     lat, lon, alt = LLA[0] * d2r, LLA[1] * d2r, LLA[2]
-
-    ellipses = {
-        'WGS84': {'a': 6378137, 'inv_f': 298.257223563, 'unit': 'm'}
-    }
 
     a = float(ellipses[ellipse]['a'])
     f = 1 / float(ellipses[ellipse]['inv_f'])
