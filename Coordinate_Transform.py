@@ -226,6 +226,63 @@ def ecef2enu(LLA):
         [cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat)]
     ])
 
+
+def enu2aer(enu):
+    """Convert from ENU coordinate frame to AER
+
+    Parameters
+    ----------
+    enu : float array
+        Coordinates of an object in the East-North-Up frame
+
+    Returns
+    -------
+    out : array
+        The AER coordinates of an object
+
+    Raises
+    ------
+    None
+    """
+    xEast, yNorth, zUp = enu[0], enu[1], enu[2]
+
+    deg360 = 2 * np.arctan2(0, -1)
+    r = np.hypot(xEast, yNorth)
+
+    slant_r = np.hypot(r, zUp)
+    el = np.arctan2(zUp, r)
+    az = np.mod(np.arctan2(xEast, yNorth), deg360)
+
+    return az, el, slant_r
+
+
+def aer2enu(aer):
+    """Convert from AER coordinate frame to ENU
+
+    Parameters
+    ----------
+    aer : float array
+        Coordinates of an object in the Azimuth, Elevation, Slant Range frame
+
+    Returns
+    -------
+    out : array
+        The ENU coordinates of an object
+
+    Raises
+    ------
+    None
+    """
+    az, el, slant_r = aer[0] * d2r, aer[1] * d2r, aer[2]
+
+    zUp = slant_r * sin(el)
+    r = slant_r * cos(el)
+    xEast = r * sin(az)
+    yNorth = r * cos(az)
+
+    return xEast, yNorth, zUp
+
+
 def relA2B_RAE(A, B):
     """Determine the relative azimuth and elevation from object A to object B.
 
