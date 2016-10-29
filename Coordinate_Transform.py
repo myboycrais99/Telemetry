@@ -14,6 +14,7 @@ ellipses = {
     'WGS84': {'a': 6378137, 'inv_f': 298.257223563, 'unit': 'm'}
     }
 
+
 def degrees2dms(deg):
     """"Convert from decimal degrees to degrees, minutes, seconds"""
     d = int(deg)
@@ -22,11 +23,13 @@ def degrees2dms(deg):
 
     return d, m, s
 
+
 def dms2degrees(dms):
     """Convert from degrees, minutes, seconds to decimal degrees"""
     return dms[0] + (dms[1] + dms[2] / 60) / 60
 
-def lla2ecef(LLA, ellipse='WGS84'):
+
+def geodetic2ecef(LLA, ellipse='WGS84'):
     """Convert latitude, longitude, and altitude to earth-centered, earth-fixed
     (ECEF) cartesian
 
@@ -57,16 +60,74 @@ def lla2ecef(LLA, ellipse='WGS84'):
     e = np.sqrt(1 - (b / a) ** 2)
 
     # Intermediate calculation (prime vertical radius of curvature)
-    N = a / np.sqrt(1 - (e * np.sin(lat)) ** 2)
+    N = a / np.sqrt(1 - (e * sin(lat)) ** 2)
 
-    X = (N + alt) * np.cos(lat) * np.cos(lon)
-    Y = (N + alt) * np.cos(lat) * np.sin(lon)
-    Z = ((b / a) ** 2 * N + alt) * np.sin(lat)
+    X = (N + alt) * cos(lat) * cos(lon)
+    Y = (N + alt) * cos(lat) * sin(lon)
+    Z = ((b / a) ** 2 * N + alt) * sin(lat)
 
     return np.array([X, Y, Z], dtype=float)
 
 
-def rotation_ned2ecef(LLA):
+def ecef2geodetic(XYZ, ellipse='WGS84'):
+    """Convert from ECEF to geodetic coordinates.
+
+    This function uses the Ferrari solution to convert from ECEF to geodetic
+    (latitude, longitude, altitude) coordinates using a 15-step process. This
+    method was found at:
+    https://en.wikipedia.org/wiki/Geographic_coordinate_conversion
+
+    Parameters
+    ----------
+    XYZ : float array
+        The ECEF coordinates of an object
+
+    Return
+    ------
+    out : float array
+        Return the geodetic coordinates of an object
+
+    Raises
+    ------
+    None
+    """
+    X, Y, Z = XYZ
+
+    a = float(ellipses[ellipse]['a'])
+    f = 1 / float(ellipses[ellipse]['inv_f'])
+
+    b = a * (1 - f)
+    e = np.sqrt(1 - (b / a)**2)
+    e1_2 = (a / b)**2 - 1
+
+    r = np.sqrt(X**2 + Y**2)                                               # 1
+    E_2 = a**2 - b**2                                                      # 2
+    F = 54 * b**2 * Z**2                                                   # 3
+    G = r**2 + (1 - e**2) * Z**2 - e**2 * E_2                              # 4
+    C = e**4 * F * r**2 / G**3                                             # 5
+    s = 1 + C + np.sqrt(C**2 + 2 * C)                                      # 6a
+
+    if 0 <= s:
+        S = s**(1 / 3)                                                     # 6b
+    else:
+        S = -(-s)**(1 / 3)                                                 # 6c
+
+    P = F / (3 * (S + (1 / S) + 1)**2 * G**2)                              # 7
+    Q = np.sqrt(1 + 2 * e**4 * P)                                          # 8
+    r0 = -((P * e**2 * r) / (1 + Q)) + np.sqrt((a**2 / 2) * (1 + 1 / Q) -
+        (P * (1 - e**2) * Z**2) / (Q * (1 + Q)) - P * r**2 / 2)            # 9
+    U = np.sqrt((r - e**2 * r0)**2 + Z**2)                                 # 10
+    V = np.sqrt((r - e**2 * r0)**2 + (1 - e**2) * Z**2)                    # 11
+    Z0 = (b**2 * Z) / (a * V)                                              # 12
+
+    h = U * (1 - (b**2 / (a * V)))                                         # 13
+    lat = np.arctan((Z + e1_2 * Z0) / r) * r2d                             # 14
+    lon = np.arctan2(Y, X) * r2d                                           # 15
+
+    return lat, lon, h
+
+
+def ned2ecef(LLA):
     """Rotation matrix for converting from North-East-Down (NED) reference
     frame to Earth-Centered Earth-Fixed frame using Latitude and Longitude.
 
@@ -88,13 +149,13 @@ def rotation_ned2ecef(LLA):
     lat, lon = LLA[0] * d2r, LLA[1] * d2r
 
     return np.array([
-        [-np.sin(lat) * np.cos(lon), -np.sin(lon), -np.cos(lat) * np.cos(lon)],
-        [-np.sin(lat) * np.sin(lon), np.cos(lon), -np.cos(lat) * np.sin(lon)],
-        [np.cos(lat), 0.0, -np.sin(lat)]
+        [-sin(lat) * cos(lon), -sin(lon), -cos(lat) * cos(lon)],
+        [-sin(lat) * sin(lon), cos(lon), -cos(lat) * sin(lon)],
+        [cos(lat), 0.0, -sin(lat)]
     ])
 
 
-def rotation_ecef2ned(LLA):
+def ecef2ned(LLA):
     """Rotation matrix for converting from Earth-Centered Earth-Fixed frame to
     North-East-Down (NED) reference using Latitude and Longitude.
 
@@ -116,9 +177,9 @@ def rotation_ecef2ned(LLA):
     lat, lon = LLA[0] * d2r, LLA[1] * d2r
 
     return np.array([
-        [-np.sin(lat) * np.cos(lon), -np.sin(lat) * np.sin(lon), np.cos(lat)],
-        [-np.sin(lon), np.cos(lon), 0.0],
-        [-np.cos(lat) * np.cos(lon), -np.cos(lat) * np.sin(lon), -np.sin(lat)]
+        [-sin(lat) * cos(lon), -sin(lat) * sin(lon), cos(lat)],
+        [-sin(lon), cos(lon), 0.0],
+        [-cos(lat) * cos(lon), -cos(lat) * sin(lon), -sin(lat)]
     ])
 
 
@@ -141,7 +202,7 @@ def relA2B_RAE(A, B):
     None
     """
 
-    relA2B_ned = np.dot(rotation_ecef2ned(A), lla2ecef(B) - lla2ecef(A))
+    relA2B_ned = np.dot(ecef2ned(A), geodetic2ecef(B) - geodetic2ecef(A))
 
     r = np.linalg.norm(relA2B_ned)
     az = np.arctan2(relA2B_ned[1], relA2B_ned[0]) * r2d
