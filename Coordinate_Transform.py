@@ -174,14 +174,57 @@ def ecef2ned(LLA):
     ------
     None
     """
+    return ned2ecef(LLA).T
+
+
+def enu2ecef(LLA):
+    """Rotation matrix for converting from East-North-Up (ENU) frame to
+    Earth-Centered Earth Fixed reference frame using latitude and longitude.
+
+    Parameters
+    ----------
+    LLA : float array
+        Geodetic latitude in radians, longitude in radians, and altitude above
+        reference ellipsoid in meters
+
+    Returns
+    -------
+    out : array
+        A 3x3 matrix representing the ENU to ECEF rotation from LLA
+
+    Raises
+    ------
+    None
+    """
+    return ecef2enu(LLA).T
+
+
+def ecef2enu(LLA):
+    """Rotation matrix for converting from Earth-Centered Earth-Fixed frame to
+    East-North-Up (ENU) reference frame using geodetic latitude and longitude
+
+    Parameters
+    ----------
+    LLA : float array
+        Geodetic latitude in radians, longitude in radians, and altitude above
+        reference ellipsoid in meters
+
+    Returns
+    -------
+    out : array
+        A 3x3 matrix representing the ECEF to ENU rotation from LLA
+
+    Raises
+    ------
+    None
+    """
     lat, lon = LLA[0] * d2r, LLA[1] * d2r
 
-    return np.array([
+    return([
+        [-sin(lon), cos(lon, 0.0), 0.0],
         [-sin(lat) * cos(lon), -sin(lat) * sin(lon), cos(lat)],
-        [-sin(lon), cos(lon), 0.0],
-        [-cos(lat) * cos(lon), -cos(lat) * sin(lon), -sin(lat)]
+        [cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat)]
     ])
-
 
 def relA2B_RAE(A, B):
     """Determine the relative azimuth and elevation from object A to object B.
