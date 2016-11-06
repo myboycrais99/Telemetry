@@ -250,8 +250,8 @@ def enu2aer(enu):
     r = np.hypot(xEast, yNorth)
 
     slant_r = np.hypot(r, zUp)
-    el = np.arctan2(zUp, r)
-    az = np.mod(np.arctan2(xEast, yNorth), deg360)
+    el = np.arctan2(zUp, r) * r2d
+    az = np.mod(np.arctan2(xEast, yNorth), deg360) * r2d
 
     return az, el, slant_r
 
@@ -329,7 +329,7 @@ def platform_dcm(orientation):
     """
     hdg, pitch, roll = np.asarray(orientation) * d2r
 
-    return([
+    return np.array([
         [cos(pitch) * cos(hdg), cos(pitch) * sin(hdg), -sin(pitch)],
         [-cos(roll) * sin(hdg) + sin(roll) * sin(pitch) * cos(hdg),
             cos(roll) * cos(hdg) + sin(roll) * sin(pitch) * sin(hdg),
