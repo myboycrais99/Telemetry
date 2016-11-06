@@ -21,7 +21,7 @@ def degrees2dms(deg):
     m = int((deg - d) * 60)
     s = ((deg - d) * 60 - m) * 60
 
-    return d, m, s
+    return np.array([d, m, s])
 
 
 def dms2degrees(dms):
@@ -66,7 +66,7 @@ def geodetic2ecef(LLA, ellipse='WGS84'):
     Y = (N + alt) * cos(lat) * sin(lon)
     Z = ((b / a) ** 2 * N + alt) * sin(lat)
 
-    return np.array([X, Y, Z], dtype=float)
+    return np.asarray([X, Y, Z], dtype=float)
 
 
 def ecef2geodetic(XYZ, ellipse='WGS84'):
@@ -124,7 +124,7 @@ def ecef2geodetic(XYZ, ellipse='WGS84'):
     lat = np.arctan((Z + e1_2 * Z0) / r) * r2d                             # 14
     lon = np.arctan2(Y, X) * r2d                                           # 15
 
-    return lat, lon, h
+    return np.asarray([lat, lon, h], dtype=float)
 
 
 def ned2ecef(LLA):
@@ -148,7 +148,7 @@ def ned2ecef(LLA):
     """
     lat, lon = LLA[0] * d2r, LLA[1] * d2r
 
-    return np.array([
+    return np.asarray([
         [-sin(lat) * cos(lon), -sin(lon), -cos(lat) * cos(lon)],
         [-sin(lat) * sin(lon), cos(lon), -cos(lat) * sin(lon)],
         [cos(lat), 0.0, -sin(lat)]
@@ -220,7 +220,7 @@ def ecef2enu(LLA):
     """
     lat, lon = LLA[0] * d2r, LLA[1] * d2r
 
-    return([
+    return np.asarray([
         [-sin(lon), cos(lon, 0.0), 0.0],
         [-sin(lat) * cos(lon), -sin(lat) * sin(lon), cos(lat)],
         [cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat)]
@@ -253,7 +253,7 @@ def enu2aer(enu):
     el = np.arctan2(zUp, r) * r2d
     az = np.mod(np.arctan2(xEast, yNorth), deg360) * r2d
 
-    return az, el, slant_r
+    return np.asarray([az, el, slant_r])
 
 
 def aer2enu(aer):
@@ -280,7 +280,7 @@ def aer2enu(aer):
     xEast = r * sin(az)
     yNorth = r * cos(az)
 
-    return xEast, yNorth, zUp
+    return np.asarray([xEast, yNorth, zUp])
 
 
 def relA2B_RAE(A, B):
@@ -307,7 +307,7 @@ def relA2B_RAE(A, B):
     az = np.arctan2(relA2B_ned[1], relA2B_ned[0]) * r2d
     el = np.arcsin(-relA2B_ned[2] / r) * r2d
 
-    return np.array([r, az, el])
+    return np.asarray([r, az, el])
 
 
 def platform_dcm(orientation):
@@ -329,7 +329,7 @@ def platform_dcm(orientation):
     """
     hdg, pitch, roll = np.asarray(orientation) * d2r
 
-    return np.array([
+    return np.asarray([
         [cos(pitch) * cos(hdg), cos(pitch) * sin(hdg), -sin(pitch)],
         [-cos(roll) * sin(hdg) + sin(roll) * sin(pitch) * cos(hdg),
             cos(roll) * cos(hdg) + sin(roll) * sin(pitch) * sin(hdg),
