@@ -15,7 +15,7 @@ import numpy as np
 from scipy.interpolate import RectBivariateSpline
 import struct
 
-filename = 'geoid84_meters.txt'
+filename = 'g2012_coarse.bin'
 
 
 def read_data(filename):
@@ -60,7 +60,10 @@ def read_data(filename):
         '{}f'.format(nlat * nlon), data, offset=44)).reshape(nlat, nlon)
 
     lat = slat + np.arange(0, nlat * dlat, dlat)
-    lon = wlon + np.arange(0, nlon * dlon, dlon) - 360
+
+    if wlon > 180:
+        wlon = wlon - 360
+    lon = wlon + np.arange(0, nlon * dlon, dlon)
 
     return RectBivariateSpline(lat, lon, goeid_separation)
 
@@ -99,7 +102,7 @@ def determine_datafile(lat, lon):
     elif 24 <= lat < 41:
         file_num = 4
     else:
-        filename = 'geoid84_course_meters.txt'
+        filename = 'g2012_coarse.bin'
 
     if -130 <= lon < -112:
         file_num += 1
@@ -110,7 +113,7 @@ def determine_datafile(lat, lon):
     elif -78 <= lon < -60:
         file_num += 4
     else:
-        filename = 'geoid84_course_meters.txt'
+        filename = 'g2012_coarse.bin'
 
     if filename is None:
         filename = 'g2012bu{}.bin'.format(file_num)
